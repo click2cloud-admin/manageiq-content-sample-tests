@@ -3,7 +3,7 @@ This document is an introduction into the process of unit testing CloudForms Aut
 
 Inspired by Christian Jung teaser introduction to some CloudForms Automation best practices at [http://www.jung-christian.de/post/2017/10/automate-best-practice/](http://www.jung-christian.de/post/2017/10/automate-best-practice/), this serves to expand on that, and provided details of that for administrator/developer of CloudForms who perhaps isn’t familiar with the tools and concepts discussed.
 
-**Note** This document is written against PR ManageIQ/manageiq-content/pull/250 ,
+**Note** This document is written against PR https://github.com/ManageIQ/manageiq-content/pull/250 , or a personally patched version.
 
 # Goals
 
