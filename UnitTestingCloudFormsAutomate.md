@@ -3,6 +3,8 @@ This document is an introduction into the process of unit testing CloudForms Aut
 
 Inspired by Christian Jung teaser introduction to some CloudForms Automation best practices at [http://www.jung-christian.de/post/2017/10/automate-best-practice/](http://www.jung-christian.de/post/2017/10/automate-best-practice/), this serves to expand on that, and provided details of that for administrator/developer of CloudForms who perhaps isn’t familiar with the tools and concepts discussed.
 
+**Note** This document is written against PR ManageIQ/manageiq-content/pull/250 ,
+
 # Goals
 
 Our ultimate goal is to have an environment for unit testing our Automate methods.
@@ -82,27 +84,29 @@ If everything is working, you should see a code coverage report from the ManageI
 
 If you have gotten this far, you have proven out your environment by testing existing code.
 
-#On to testing
+# On to testing
 
-##Some Theory
+## Some Theory
 
-This document does not serve as an introduction to Unit Testing, Test Driven Development, or how to write good tests. Far superior references exist and are outside the scope of this effort, however, a quick recap is necessary.
+This document does not serve as full guide to to Unit Testing, Test Driven Development, or how to write good tests. Far superior references exist and are outside the scope of this effort, however, a quick recap is necessary.
 
-First consider the difference of _testing_ code and _testable_ code. Theoretical concerns of the halting problem aside, in practice, automated testing of code realistically require code to be written to be testable, to be testable by a particular test framework toolset, and to be testable within some project specific conventions and build environment.
+First consider the difference of _testing_ code and _testable_ code. Theoretical concerns of the halting problem aside, in practice, automated testing of code realistically require code to be written to be testable, to be testable by a particular test framework toolset, and to be testable within some project specific conventions and build environment. Further the ManageIQ Automate engine and sandbox requires special consideration to workaround.
 
-Our goal here is _unit_ testing code. We are not simulating entire workflows. Initially we can only possibly expect to test for conditions we expect to happen. As code enters manual full testing, and use with real users and live systems, more and more unimaginable user inputs and API responses will be encountered. As the _unit_ is improved to handle what yesterday we knew to be impossible, the _unit test_ is improved to simulate the impossible.
+ManageIQ Automate code, by its design and purpose, manipulates a large number of components outside the control of the Automate developer, i.e. the rest of ManageIQ outside the sandbox (and the external providers it connects to!), and any remote APIs that Automate may directly interact with. Testing the method of the second state of a State machine necessitates running the first state (and, if it works, usually additional states), or cutting and pasting of code into a Rails console, or other ad hock hacks. This takes time and is cumbersome at best. It manipulates the real world environment, and even if a lab, minimally requires the tester to reset the outside systems to a good state, likely disrupts other people, and can cost real money.
 
-CloudForms Automate code, by its design purpose, manipulates a large number of components outside the control of the Automate developer, i.e. the rest of CloudForms outside the sandbox (and the external providers it connects to), and any remote APIs that Automate may directly interact with. In _Unit_ testing we don't want to run those external systems because it is slow, may have real world impact and/or take prohibitive amount of time to actually produce a real test environment, and as Automate developers anything from fixing a datastore full to segfault conditions are outside our control, authority or responsibility. Besides, Automate should gracefully handle someone forgetting to buy disks even (or especially!) if that person is you.
+In _Unit_ testing we test individual Units, that is, individual Automate Methods. We provide a simulated environment, providing test objects, known as Test Doubles, and validating our code runs as expected. Because they are simulated, they run quickly and do not touch the real world. Being simulated, resetting them is as simple as running the test again. We can test not only properly working systems, but realistic but nearly impossible failure conditions, from near-full disk to REST call timeouts. We can do so without hacking the network, or intentionally breaking the lab, and we can do so repeatedly as we make iteratively changes to our code.
 
-_Unit_ testing implies that code outside the Unit Under Test (UUT) is replaced with a "mock" version. These mocks can be manipulated by the tester to an exact known state - good, bad, or impossible. Thus we can test both success and failure conditions (and all conditions between) without either producing a dirty database, intentionally hacking a database to be dirty, or yanking hardware for the unobtanium lab environment.
+It is worth highlighting our goal here is _unit_ testing code. We are not simulating entire workflows. We are not simulating Automate State Machines.
 
-The simulated modules accessed are called "mocks", and we can use and manipulate the mock objects provided by the base ManageIQ project, and create our own for testing other integration points.
+During the development lifecycle, as a new Automate Method is developed, we can only realistically expect to test for conditions we expect to happen - we only know what we know. As code enters manual full testing, and use with real users and live systems, more and more unimaginable user inputs and API responses will be encountered. With simulated objects, we can simulate "impossible" results from integration points, and handle them rigorously at our leisure, rather then relying on luck to fix them in the moment. As the _unit_ is improved to handle what yesterday we knew to be impossible, the _unit test_ is improved to simulate the impossible.
 
-The ultimate output of Unit Testing is a report showing test results (pass/fail), and code coverage reports. Test results obviously show if the UUT operates as the test desires. The code coverage reports display what code has been run, and what has not. How well it has been tested is a different question, but an Automate method where a test exercises 100% of the lines & branches at least is guaranteed not to have syntax errors. Unit testing will also not help you convince a project manager that it meets a requirement, though a rigorous testing framework does provide evidence that _you_ did not break anything when you touched it.
+The ultimate output of Unit Testing is a report showing test results (pass/fail), and code coverage reports. Test results obviously show if the "Unit Under Test" (UUT) operates as the test desires. The code coverage reports display what code has been run (and what has not). How _well_ it has been tested is a different question, but an Automate method where a test exercises 100% of the lines & branches at least is guaranteed not to have syntax errors. Unit testing will also not help you convince a project manager that it meets a requirement, though a rigorous testing framework does provide evidence that _you_ did not break anything when you touched it.
 
 _Test Driven Development_ is the idea of writing test cases before and with the run time code. ```rspec```, the Ruby testing framework takes this concept further, describing it as "Behaviour Driven Development": describing a desired behaviour of a unit (Automate method) through a unit test.
 
-<!-- TODO: talk about writing mocks when I write a mock -->
+### Test Doubles
+
+.....
 
 ## Back to reality
 
@@ -116,17 +120,20 @@ Broadly, testing an automate method from the wild will consists of doing the fol
 
 * Wrapping the core code in module/class decorations
 
-* Wrapping the main code in a main() function definition
+* Wrapping the main code in a `main()` function definition
 
-* Adding an initialize() method to allow injecting a mock $evm into @handle
+* Adding an `initialize()` method to allow injecting a mock `$evm` into `@handle`
 
-* Tweaking any existing code to use @handle _viz_ $evm
+* Tweaking any existing code to use `@handle` _viz_ `$evm`
 
 * Writing spec files (the tests themselves) to test the code
 
+  * Wiring up and configuring existing Test Doubles
+  * Writing and configuring new test doubles, if required
+
 * Optionally, otherwise refactoring the code to more easily access deep logic structures
 
-* For advanced gamers, it is possible to mock out even external APIs, but that is a for a future post or revision of this
+Some tests are better than no tests, and it may be possible to produce credible coverage of existing Automate Domains without having to write new Test Doubles.
 
 ### Project Layout
 
@@ -169,15 +176,11 @@ Link the factory / helper file locations, e.g.,
 
 
 **Tip**
-You may symlink in your own Automate domain, at any time, safely. The code will not be tested unless there is a _spec.rb file that tries to test it.
-
-**Further Pedantic Aside**: Ruby modules, classes and methods have little to do with Automate namespaces, classes, instances and methods. The concepts are overloaded, and refactoring to the new format, you still will not be able to directly instantiate or call other Automate “methods” post-conversion.
+You may symlink in your own Automate domain, safely. The code will not be tested unless there is a _spec.rb file that tries to test it.
 
 ## Walkthrough of testing code
 
-Or at least play along and use my Method.
-
-I give you ```CFLAB/datastore/DynamicDialogs/Methods.class/__methods__/list_flavors.rb``` :
+A sample Automate method I had is a datasource for a dynamic drop down. Suitably updated to be testable, this is `manageiq-content-sample-tests/automate/Cflab/DynamicDialogs/Methods.class/__methods__/list_flavors.rb` :
 
 ```
 module Cflab
@@ -189,19 +192,7 @@ module Cflab
       # Enforces RBAC
       #
       class List_flavors
-
-        def log(level, msg, update_message = false)
-          @handle.log(level, "#{msg}")
-          @task.message = msg if @task && (update_message || level == 'error')
-        end
-
-        def dump_root()
-          log(:info, "Begin @handle.root.attributes")
-          @handle.root.attributes.sort.each {|k, v| log(:info, "\t Attribute: #{k} = #{v}")}
-          log(:info, "End @handle.root.attributes")
-          log(:info, "")
-        end
-
+        include Cflab::StdLib::Core
         # look at the users current group to get the rbac tag filters applied to that group
         def get_current_group_rbac_array
           @rbac_array = []
@@ -211,7 +202,7 @@ module Cflab
               @rbac_array << {category => tag}
             end
           end
-          log(:info, "@user: #{@user.userid} RBAC filters: #{@rbac_array}")
+          #log(:info, "@user: #{@user.userid} RBAC filters: #{@rbac_array}")
           @rbac_array
         end
 
@@ -241,6 +232,7 @@ module Cflab
           dialog_hash = {}
 
           dump_root()
+          log(:info, "I am here")
 
           @handle.vmdb(:ManageIQ_Providers_Amazon_CloudManager_Flavor).all.each do |flavor|
             next unless flavor.ext_management_system || flavor.enabled
@@ -268,38 +260,71 @@ if __FILE__ == $PROGRAM_NAME
 end
 
 ```
-I created an initial _spec.rb file by copying ```Projects/manageiq-content/spec/content/automate/ManageIQ/Infrastructure/VM/Transform/Import.class/__methods__/list_tag_categories_spec.rb``` into ```Projects/CFLAB/specs/Cflab/DynamicDialogs/Methods.class/__methods__/list_flavors_spec.rb```
 
-This required some tweaking and I got:
+I initial copied a core `manageiq-content` _spec.rb for a different drop down. Update and testing more, this is `manageiq-content-sample-tests/spec/Cflab/DynamicDialogs/Methods.class/__methods__/list_flavors_spec.rb`
+
 
 ```
+#
+# Test cases for list_flavors.rb, a drop down helper
+#
+
+# First, read in the Automate script we are testing
 require_domain_file
 
+#
+# Put the noted class (automate method) under test, what rspec calls "describing" its behaviour
+#
+
 describe Cflab::DynamicDialogs::Methods::List_flavors do
-  let(:user) {FactoryGirl.create(:user_with_email_and_group)}
-  let(:svc_model_user) {MiqAeMethodService::MiqAeServiceUser.find(user.id)}
 
-  let(:ems) {FactoryGirl.create(:ems_amazon)}
+  include_examples "Core StdLib"
 
+  #
+  # Setup our objects needed for testing
+  #
+  # let() has the objects created dynamically as needed
+  #
+  # FactoryGirl is involved, but significantly for Automate testers, there are a bunch of named
+  #     mocks available for use in manageiq/spec/factories
+
+  # create a user
+  let(:user) { FactoryGirl.create(:user_with_email_and_group) }
+
+  # and the Automate shadow object
+  let(:svc_model_user) { MiqAeMethodService::MiqAeServiceUser.find(user.id) }
+
+  # a provider
+  let(:ems) { FactoryGirl.create(:ems_amazon) }
+
+  # a flavor
   let(:t2_small_flavor) do
     FactoryGirl.create(:flavor_amazon, :ems_id => ems.id,
                        :name => 't2.small',
                        :cloud_subnet_required => false)
   end
 
+  # and another flavor
   let(:m2_small_flavor) do
     FactoryGirl.create(:flavor_amazon, :ems_id => ems.id,
-    :name => 'm2.small',
-    :cloud_subnet_required => false)
+                       :name => 'm2.small',
+                       :cloud_subnet_required => false)
   end
 
+
+  # Note we are not adding the fake flavors to the fake provider here!
+  # we wish to test listing flavors and listing when there are not flavors,
+  # so we attach the flavors in particular test cases (or not).
+
+  # build our fake $evm.root
   let(:root_object) do
     Spec::Support::MiqAeMockObject.new(
-    'dialog_provider' => ems.id.to_s,
-    'user' => svc_model_user,
-    )
+        'dialog_provider' => ems.id.to_s,
+        'user' => svc_model_user,
+        )
   end
 
+  # and the rest of the Automate runtime sandbox
   let(:ae_service) do
     Spec::Support::MiqAeMockService.new(root_object).tap do |service|
       current_object = Spec::Support::MiqAeMockObject.new
@@ -308,48 +333,71 @@ describe Cflab::DynamicDialogs::Methods::List_flavors do
     end
   end
 
+  # Note: I did not actually mean "create" above, the objects are created dynamically on demand.
+  #       And also, per-test. Each test is run in a clean and independently universe. Or should
+
+  # Test case - list the flavors as expected
+
   it 'should list flavors' do
 
+    # If only teaching real AWS about flavors was so easy
     ems.flavors << m2_small_flavor
     ems.flavors << t2_small_flavor
 
+    # Build our hash of the expected output
+    flavors = {}
+    ems.flavors.each do |flavor|
+      flavors[flavor.id] = "#{flavor.name} on #{ems.name}"
+    end
+
+    # Instantiate our Automate Method, inject it with the fake $evm and run the main(), er, method
+    described_class.new(ae_service).main
+
+
+    # and describe the expect()ed results.
+    #
+    # our "return" dropdown has is equal to what we expect
+    expect(ae_service.object['values']).to eq(flavors)
+
+    # Double sanity check that the length is the same as the number of Flavors we mocked out
+    # This somewhat ensures our do-something test code isn't buggy
+    expect(ae_service.object['values'].length).to eq(MiqAeMethodService::MiqAeServiceFlavor.all.length)
+
+    # These three lines were from the example _spec.rb I initially stole.
+    # My Method doesn't set them. Which "works" but may be wrong. Future versions of CloudForms
+    # may require these to be set, so it would be safest for me to fix my code. I leave them
+    # here as a badge of dishonor for you to ponder today, and future me to as a clue to fixing
+    # things when they are really required.
 
     # expect(ae_service.object['sort_by']).to eq(:description)
     # expect(ae_service.object['data_type']).to eq(:string)
     # expect(ae_service.object['required']).to eq(true)
 
-    flavors = {}
-    ems.flavors.each do |flavor|
-      puts ">> [#{flavor}]"
-      flavors[flavor.id] = "#{flavor.name} on #{ems.name}"
-    end
-
-    described_class.new(ae_service).main
-
-    # puts flavors
-    # puts ems.flavors.length
-
-    expect(ae_service.object['values']).to eq(flavors)
-    expect(ae_service.object['values'].length).to eq(MiqAeMethodService::MiqAeServiceFlavor.all.length)
   end
 
+  # Test case - no flavors
   it 'show show no flavors' do
 
-    flavors = {'' => '< no flavors found >'}
+    # define our expected dropdown to be built when we have no filters
+    flavors = { '' => '< no flavors found >' }
 
+    # run the code
     described_class.new(ae_service).main
 
+    # Check the results
     expect(ae_service.object['values']).to eq(flavors)
     expect(ae_service.object['values'].length).to eq(1)
   end
 end
 
 ```
-You can run a this single test from ```manageiq-content``` with:
+You can run a this single test from `manageiq-content` with:
 
 ```bundle exec rspec --format documentation spec/content/automate/Cflab/DynamicDialogs/Methods.class/__methods__/list_flavors_spec.rb```
 
 or, the entire test suite with:
 
 ```bundle exec rake```
+
+The test results of pass/fail show up in the console, and a code coverage report in `coverage/index.html`
 

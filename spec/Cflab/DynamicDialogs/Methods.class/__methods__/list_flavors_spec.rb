@@ -22,13 +22,13 @@ describe Cflab::DynamicDialogs::Methods::List_flavors do
   #     mocks available for use in manageiq/spec/factories
 
   # create a user
-  let(:user) {FactoryGirl.create(:user_with_email_and_group)}
+  let(:user) { FactoryGirl.create(:user_with_email_and_group) }
 
   # and the Automate shadow object
-  let(:svc_model_user) {MiqAeMethodService::MiqAeServiceUser.find(user.id)}
+  let(:svc_model_user) { MiqAeMethodService::MiqAeServiceUser.find(user.id) }
 
   # a provider
-  let(:ems) {FactoryGirl.create(:ems_amazon)}
+  let(:ems) { FactoryGirl.create(:ems_amazon) }
 
   # a flavor
   let(:t2_small_flavor) do
@@ -40,8 +40,8 @@ describe Cflab::DynamicDialogs::Methods::List_flavors do
   # and another flavor
   let(:m2_small_flavor) do
     FactoryGirl.create(:flavor_amazon, :ems_id => ems.id,
-    :name => 'm2.small',
-    :cloud_subnet_required => false)
+                       :name => 'm2.small',
+                       :cloud_subnet_required => false)
   end
 
 
@@ -52,9 +52,9 @@ describe Cflab::DynamicDialogs::Methods::List_flavors do
   # build our fake $evm.root
   let(:root_object) do
     Spec::Support::MiqAeMockObject.new(
-    'dialog_provider' => ems.id.to_s,
-    'user' => svc_model_user,
-    )
+        'dialog_provider' => ems.id.to_s,
+        'user' => svc_model_user,
+        )
   end
 
   # and the rest of the Automate runtime sandbox
@@ -112,7 +112,7 @@ describe Cflab::DynamicDialogs::Methods::List_flavors do
   it 'show show no flavors' do
 
     # define our expected dropdown to be built when we have no filters
-    flavors = {'' => '< no flavors found >'}
+    flavors = { '' => '< no flavors found >' }
 
     # run the code
     described_class.new(ae_service).main

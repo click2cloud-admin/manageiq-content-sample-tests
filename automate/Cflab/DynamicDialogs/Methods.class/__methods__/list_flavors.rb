@@ -1,4 +1,3 @@
-# require '/home/jwarnica/Projects/manageiq-content/content/automate/Cflab/StdLib/Core.class/__methods__/core.rb'
 module Cflab
   module DynamicDialogs
     module Methods
